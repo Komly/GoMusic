@@ -1,41 +1,55 @@
 package vkapi
 
 import (
-	"fmt"
+	"errors"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 )
 
+const (
+	apiVersion = "5.37"
+)
+
+type (
+	// APIClient is struct for holding context
+	APIClient struct {
+		http *http.Client
+	}
+)
+
+// NewAPIClient constructor
+func NewAPIClient() *APIClient {
+	apiCient := new(APIClient)
+	apiCient.http = http.DefaultClient
+	return apiCient
+}
+
 // APIRequest makes request to api and returns response as string
-func APIRequest(method string, params map[string]string) (string, error) {
-	url := getRequestURL(method, params)
-	resp, err := http.Get(url.String())
+func (apiClient *APIClient) APIRequest(method string, params map[string]string) (string, error) {
+	url := apiClient.getRequestURL(method, params)
+	resp, err := apiClient.http.Get(url.String())
 	if err != nil {
-		log.Println("Can't get request from api")
-		return "", err
+		return "", errors.New("Can't get request from api")
 	}
 	defer resp.Body.Close()
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("Can't get body from request")
-		return "", err
+		return "", errors.New("Can't get body from request")
 	}
 
-	fmt.Println("data:", string(data))
 	return string(data), nil
 }
 
-func getRequestURL(method string, params map[string]string) (data url.URL) {
+func (apiClient *APIClient) getRequestURL(method string, params map[string]string) (data url.URL) {
 	resultURL := url.URL{
 		Host:   "api.vk.com",
 		Scheme: "https",
 		Path:   "method/" + method,
 	}
 	query := resultURL.Query()
-	query.Set("v", "5.37")
+	query.Set("v", apiVersion)
 	for key, value := range params {
 		query.Set(key, value)
 	}
